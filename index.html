@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Katberqueen Store · POS</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --primary: #ea580c;
+      --primary-dark: #c2410c;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
+    header { background: var(--primary); color: #fff; padding: 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    .badge { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+    .tabs { display: flex; background: #fff; border-bottom: 1px solid var(--border); position: sticky; top: 56px; z-index: 9; }
+    .tab { flex: 1; padding: 12px; text-align: center; font-weight: 600; font-size: 0.9rem; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; margin-top: 12px; }
+    .product-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; transition: transform 0.1s; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .product-card:active { transform: scale(0.97); }
+    .product-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; }
+    .product-price { color: var(--primary); font-weight: 700; font-size: 1.05rem; }
+    .product-stock { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    input, select, button { font-size: 0.95rem; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 12px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn:active { background: var(--primary-dark); }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; width: auto; }
+    .btn-danger { background: var(--danger); }
+    .btn-success { background: var(--success); }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .qty-controls { display: flex; align-items: center; gap: 8px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: #f1f5f9; font-weight: bold; cursor: pointer; }
+    .total-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.06); z-index: 20; }
+    .total-amount { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+    .history-item { border-bottom: 1px solid var(--border); padding: 12px 0; }
+    .history-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; }
+    .history-items { font-size: 0.85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Katberqueen Store · POS</h1>
+  <span class="badge" id="statusBadge">Offline Ready</span>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('pos', this)">POS / Sell</button>
+  <button class="tab" onclick="switchTab('cart', this)">Cart (<span id="cartCount">0</span>)</button>
+  <button class="tab" onclick="switchTab('products', this)">Items</button>
+  <button class="tab" onclick="switchTab('sales', this)">Sales</button>
+</div>
+
+<div class="container">
+  <div id="pos" class="section active">
+    <input type="text" id="searchInput" placeholder="Search item name..." oninput="renderPOS()" />
+    <div class="grid" id="posGrid"></div>
+  </div>
+
+  <div id="cart" class="section">
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Current Order</h3>
+      <div id="cartList"></div>
+      <div style="margin-top:16px;">
+        <label style="font-size:0.85rem; color:var(--muted);">Cash Received (₱)</label>
+        <input type="number" id="cashInput" placeholder="Enter amount received" oninput="updateChange()" />
+        <div style="display:flex; justify-content:space-between; font-weight:700; margin:10px 0;">
+          <span>Change:</span>
+          <span id="changeDisplay">₱0.00</span>
+        </div>
+        <button class="btn btn-success" onclick="checkout()">Complete Sale</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="products" class="section">
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Add New Product</h3>
+      <input type="text" id="newName" placeholder="Product Name (e.g., Iced Coffee)" />
+      <input type="number" id="newPrice" placeholder="Price (₱)" />
+      <input type="number" id="newStock" placeholder="Stock Quantity" />
+      <button class="btn" onclick="addProduct()">Save Product</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Inventory List</h3>
+      <div id="inventoryList"></div>
+    </div>
+  </div>
+
+  <div id="sales" class="section">
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-size:0.85rem; color:var(--muted);">Total Revenue</div>
+        <div style="font-size:1.4rem; font-weight:800; color:var(--success);" id="totalRevenue">₱0.00</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="clearSales()">Clear History</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Recent Transactions</h3>
+      <div id="salesList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="total-bar">
+  <div>
+    <div style="font-size:0.75rem; color:var(--muted);">Total Due</div>
+    <div class="total-amount" id="bottomTotal">₱0.00</div>
+  </div>
+  <button class="btn" style="width:auto; padding:12px 24px;" onclick="switchTab('cart', document.querySelectorAll('.tab')[1])">View Cart</button>
+</div>
+
+<script>
+  let products = JSON.parse(localStorage.getItem('kbq_products')) || [
+    { id: 1, name: 'Sample Item 1', price: 50, stock: 20 },
+    { id: 2, name: 'Sample Item 2', price: 120, stock: 15 }
+  ];
+  let sales = JSON.parse(localStorage.getItem('kbq_sales')) || [];
+  let cart = [];
+
+  function saveState() {
+    localStorage.setItem('kbq_products', JSON.stringify(products));
+    localStorage.setItem('kbq_sales', JSON.stringify(sales));
+  }
+
+  function switchTab(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (el) el.classList.add('active');
+    renderAll();
+  }
+
+  function addToCart(id) {
+    const prod = products.find(p => p.id === id);
+    if (!prod || prod.stock <= 0) return alert('Out of stock!');
+    const existing = cart.find(c => c.id === id);
+    if (existing) {
+      if (existing.qty >= prod.stock) return alert('Not enough stock!');
+      existing.qty++;
+    } else {
+      cart.push({ id: prod.id, name: prod.name, price: prod.price, qty: 1 });
+    }
+    updateTotals();
+  }
+
+  function changeQty(id, delta) {
+    const idx = cart.findIndex(c => c.id === id);
+    if (idx === -1) return;
+    const prod = products.find(p => p.id === id);
+    cart[idx].qty += delta;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    else if (prod && cart[idx].qty > prod.stock) cart[idx].qty = prod.stock;
+    renderCart();
+    updateTotals();
+  }
+
+  function updateTotals() {
+    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const count = cart.reduce((sum, item) => sum + item.qty, 0);
+    document.getElementById('bottomTotal').textContent = '₱' + total.toFixed(2);
+    document.getElementById('cartCount').textContent = count;
+    updateChange();
+  }
+
+  function updateChange() {
+    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const cash = parseFloat(document.getElementById('cashInput').value) || 0;
+    const change = Math.max(0, cash - total);
+    document.getElementById('changeDisplay').textContent = '₱' + change.toFixed(2);
+  }
+
+  function checkout() {
+    if (cart.length === 0) return alert('Cart is empty!');
+    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const cash = parseFloat(document.getElementById('cashInput').value) || 0;
+    if (cash < total) return alert('Insufficient cash received!');
+
+    cart.forEach(item => {
+      const prod = products.find(p => p.id === item.id);
+      if (prod) prod.stock -= item.qty;
+    });
+
+    sales.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      items: [...cart],
+      total: total,
+      cash: cash,
+      change: cash - total
+    });
+
+    cart = [];
+    document.getElementById('cashInput').value = '';
+    saveState();
+    renderAll();
+    alert('Sale completed!');
+  }
+
+  function addProduct() {
+    const name = document.getElementById('newName').value.trim();
+    const price = parseFloat(document.getElementById('newPrice').value);
+const stock = parseInt(document.getElementById('newStock').value);
+if (!name || isNaN(price) || isNaN(stock)) return alert('Please fill all fields.');
+products.push({ id: Date.now(), name, price, stock });
+document.getElementById('newName').value = '';
+document.getElementById('newPrice').value = '';
+document.getElementById('newStock').value = '';
+saveState();
+renderAll();
+}
+function deleteProduct(id) {
+if (!confirm('Delete this item?')) return;
+products = products.filter(p => p.id !== id);
+saveState();
+renderAll();
+}
+function clearSales() {
+if (!confirm('Clear all sales history?')) return;
+sales = [];
+saveState();
+renderAll();
+}
+function renderPOS() {
+const q = document.getElementById('searchInput').value.toLowerCase();
+const grid = document.getElementById('posGrid');
+grid.innerHTML = products
+.filter(p => p.name.toLowerCase().includes(q))
+.map(p => <div class="product-card" onclick="addToCart(${p.id})"> <div class="product-name">${p.name}</div> <div class="product-price">₱${p.price.toFixed(2)}</div> <div class="product-stock">Stock: ${p.stock}</div> </div>).join('');
+}
+function renderCart() {
+const list = document.getElementById('cartList');
+if (cart.length === 0) {
+list.innerHTML = 'No items in cart.';
+return;
+}
+list.innerHTML = cart.map(item => <div class="cart-item"> <div> <div style="font-weight:600;">${item.name}</div> <div style="font-size:0.85rem; color:var(--muted);">₱${item.price.toFixed(2)} each</div> </div> <div class="qty-controls"> <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button> <span>${item.qty}</span> <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button> </div> </div>).join('');
+}
+function renderInventory() {
+const list = document.getElementById('inventoryList');
+list.innerHTML = products.map(p => <div class="cart-item"> <div> <div style="font-weight:600;">${p.name}</div> <div style="font-size:0.85rem; color:var(--muted);">₱${p.price.toFixed(2)} · Stock: ${p.stock}</div> </div> <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Delete</button> </div>).join('');
+}
+function renderSales() {
+const rev = sales.reduce((sum, s) => sum + s.total, 0);
+document.getElementById('totalRevenue').textContent = '₱' + rev.toFixed(2);
+const list = document.getElementById('salesList');
+if (sales.length === 0) {
+list.innerHTML = 'No sales recorded yet.';
+return;
+}
+list.innerHTML = sales.map(s => <div class="history-item"> <div class="history-header"> <span>₱${s.total.toFixed(2)}</span> <span style="font-size:0.8rem; color:var(--muted); font-weight:normal;">${s.date}</span> </div> <div class="history-items">${s.items.map(i =>${i.qty}x ${i.name}).join(', ')}</div> </div> ).join('');
+}
+function renderAll() {
+renderPOS();
+renderCart();
+renderInventory();
+renderSales();
+updateTotals();
+}
+renderAll();
+if ('serviceWorker' in navigator) {
+navigator.serviceWorker.register('sw.js');
+}
