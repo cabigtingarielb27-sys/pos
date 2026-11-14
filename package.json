@@ -1,0 +1,12 @@
+{
+  "name": "katberqueen-pos",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "mkdir -p www && cp index.html manifest.json sw.js icon.png www/ 2>/dev/null || true"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  }
+}
